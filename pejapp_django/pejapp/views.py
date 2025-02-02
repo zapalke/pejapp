@@ -42,7 +42,7 @@ def profile(request):
 
 def home(request):
     posts = Post.objects.all().order_by('-created_at')
-    return render(request, 'pejapp/post_list.html', {'posts': posts})
+    return render(request, 'pejapp/home.html', {'posts': posts})
 
 def search_users(request):
     query = request.GET.get('q', '')

@@ -1,9 +1,9 @@
 {% extends 'pejapp/base.html' %}
 {% block content %}
-  <h2>Rejestracja</h2>
+  <h2>Dodaj nowy post</h2>
   <form method="post">
       {% csrf_token %}
       {{ form.as_p }}
-      <button type="submit" class="btn btn-primary">Zarejestruj się</button>
+      <button type="submit" class="btn btn-success">Dodaj</button>
   </form>
 {% endblock %}
