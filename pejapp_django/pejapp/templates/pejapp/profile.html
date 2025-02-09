@@ -1,0 +1,33 @@
+{% extends 'pejapp/base.html' %}
+
+{% block content %}
+  <h2>Profil użytkownika</h2>
+  <div class="row">
+    <div class="col-md-4">
+      <h4>{{ user.username }}</h4>
+      <p>{{ user.profile.bio }}</p>
+    </div>
+    <div class="col-md-8">
+      <h3>Edytuj profil</h3>
+      <form method="post">
+        {% csrf_token %}
+        {{ u_form.as_p }}
+        {{ p_form.as_p }}
+        <button type="submit" class="btn btn-primary">Zaktualizuj</button>
+      </form>
+      <h3 class="mt-4">Twoje posty</h3>
+      {% for post in user.post_set.all %}
+        <div class="card mb-2">
+          <div class="card-body">
+            <p class="card-text">{{ post.content }}</p>
+            <p class="card-text"><small class="text-muted">{{ post.date_posted }}</small></p>
+            <a href="{% url 'post-update' post.pk %}" class="btn btn-secondary btn-sm">Edytuj</a>
+            <a href="{% url 'post-delete' post.pk %}" class="btn btn-danger btn-sm">Usuń</a>
+          </div>
+        </div>
+      {% empty %}
+        <p>Brak postów do wyświetlenia.</p>
+      {% endfor %}
+    </div>
+  </div>
+{% endblock %}

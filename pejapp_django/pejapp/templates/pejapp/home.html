@@ -2,11 +2,26 @@
 {% block content %}
   <h2>Wszystkie posty</h2>
   {% for post in posts %}
-    <div class="card mb-2">
+    <div class="card mb-5">
         <div class="card-body">
-            <h5 class="card-title">{{ post.author.username }}</h5>
-            <p class="card-text">{{ post.content }}</p>
-            <p class="card-text"><small class="text-muted">{{ post.created_at }}</small></p>
+          <h5>{{ post.title }}</h5>
+          <p>{{ post.content }}</p>
+          <p><small>Posted by {{ post.display_name }} on {{ post.date_posted }}</small></p>
+          {% if post.modified_flag %}
+            <p class="d-inline-flex gap-1">
+              <small>Modified on {{ post.last_modified }} | 
+                <a class="text-info" data-bs-toggle="collapse" href="#originalContent{{ post.pk }}" role="button" aria-expanded="false" aria-controls="originalContent{{ post.pk }}">Show original content</a>
+              </small>
+            </p>
+            <div class="collapse mt-3" id="originalContent{{ post.pk }}">
+                <div class="card card-body" style="font-size: 0.875em; border: 2px solid #ccc; background-color: #f8f9fa;">
+                  <p>{{ post.original_content }}</p>
+                </div>
+                  
+                </div>
+              </div>
+            </div>
+          {% endif %}
         </div>
     </div>
   {% empty %}
