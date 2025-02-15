@@ -1,9 +1,73 @@
 {% extends 'pejapp/base.html' %}
 {% block content %}
-  <h2>Rejestracja</h2>
-  <form method="post">
-      {% csrf_token %}
-      {{ form.as_p }}
-      <button type="submit" class="btn btn-primary">Zarejestruj się</button>
-  </form>
+<div class="container">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <main class="form-signin">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <h1 class="h3 mb-3 fw-normal text-center">Proszę zarejestruj się</h1>
+          <div class="form-floating mb-3">
+            <input type="text" name="username" class="form-control" id="id_username" placeholder="Nazwa użytkownika" required>
+            <label for="id_username">Nazwa użytkownika</label>
+          </div>
+          <div class="form-floating mb-3">
+            <input type="email" name="email" class="form-control" id="id_email" placeholder="Email" required>
+            <label for="id_email">Email</label>
+          </div>
+          <div class="form-floating mb-3">
+            <input type="password" name="password1" class="form-control" id="id_password1" placeholder="Hasło" required>
+            <label for="id_password1">Hasło</label>
+            <div id="passwordHelpBlock" class="form-text">
+              Twoje hasło musi mieć co najmniej 8 znaków, zawierać wielką literę, małą literę, cyfrę i znak specjalny.
+            </div>
+          </div>
+          <div class="form-floating mb-3">
+            <input type="password" name="password2" class="form-control" id="id_password2" placeholder="Potwierdź hasło" required>
+            <label for="id_password2">Potwierdź hasło</label>
+          </div>
+          <button class="btn btn-primary w-100 py-2" type="submit">Zarejestruj się</button>
+        </form>
+      </main>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const password1 = document.getElementById('id_password1');
+    const password2 = document.getElementById('id_password2');
+    const passwordHelpBlock = document.getElementById('passwordHelpBlock');
+
+    function validatePassword() {
+      const password = password1.value;
+      const requirements = [
+        { regex: /.{8,}/, message: 'co najmniej 8 znaków' },
+        { regex: /[A-Z]/, message: 'wielką literę' },
+        { regex: /[a-z]/, message: 'małą literę' },
+        { regex: /\d/, message: 'cyfrę' },
+        { regex: /[!@#$%^&*(),.?":{}|<>]/, message: 'znak specjalny' }
+      ];
+
+      const unmetRequirements = requirements.filter(req => !req.regex.test(password)).map(req => req.message);
+      if (unmetRequirements.length > 0) {
+        passwordHelpBlock.textContent = `Twoje hasło musi mieć ${unmetRequirements.join(', ')}.`;
+        passwordHelpBlock.classList.add('text-danger');
+      } else {
+        passwordHelpBlock.textContent = 'Twoje hasło spełnia wszystkie wymagania.';
+        passwordHelpBlock.classList.remove('text-danger');
+        passwordHelpBlock.classList.add('text-success');
+      }
+    }
+
+    password1.addEventListener('input', validatePassword);
+    password2.addEventListener('input', function () {
+      if (password1.value !== password2.value) {
+        password2.setCustomValidity('Hasła się nie zgadzają');
+      } else {
+        password2.setCustomValidity('');
+      }
+    });
+  });
+</script>
 {% endblock %}

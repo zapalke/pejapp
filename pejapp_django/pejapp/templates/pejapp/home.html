@@ -1,30 +1,74 @@
 {% extends 'pejapp/base.html' %}
 {% block content %}
-  <h2>Wszystkie posty</h2>
-  {% for post in posts %}
-    <div class="card mb-5">
-        <div class="card-body">
-          <h5>{{ post.title }}</h5>
-          <p>{{ post.content }}</p>
-          <p><small>Posted by {{ post.display_name }} on {{ post.date_posted }}</small></p>
-          {% if post.modified_flag %}
-            <p class="d-inline-flex gap-1">
-              <small>Modified on {{ post.last_modified }} | 
-                <a class="text-info" data-bs-toggle="collapse" href="#originalContent{{ post.pk }}" role="button" aria-expanded="false" aria-controls="originalContent{{ post.pk }}">Show original content</a>
-              </small>
-            </p>
-            <div class="collapse mt-3" id="originalContent{{ post.pk }}">
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <h2 class="text-left mb-4" style="font-family: 'Arial Black', sans-serif; color: #007bff;">Wszystkie posty</h2>
+      {% for post in posts %}
+        <div class="card mb-4 shadow-sm">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            {% if post.title %}
+              <h5 class="mb-0">{{ post.title }}</h5>
+            {% endif %}
+            <small class="text-muted ms-auto">Opublikowane przez <a href="#" class="text-primary">{{ post.author.username }}</a> <span class="post-date" data-date="{{ post.date_posted|date:'c' }}">{{ post.date_posted }}</span></small>
+          </div>
+          <div class="card-body">
+            <p class="card-text">{{ post.content }}</p>
+            {% if post.modified_flag %}
+              <p class="text-muted">
+                <small>Zmodyfikowano <span class="post-date" data-date="{{ post.last_modified|date:'c' }}">{{ post.last_modified }}</span> | 
+                  <a class="text-info" data-bs-toggle="collapse" href="#originalContent{{ post.pk }}" role="button" aria-expanded="false" aria-controls="originalContent{{ post.pk }}">Pokaż oryginalną treść</a>
+                </small>
+              </p>
+              <div class="collapse mt-3" id="originalContent{{ post.pk }}">
                 <div class="card card-body" style="font-size: 0.875em; border: 2px solid #ccc; background-color: #f8f9fa;">
                   <p>{{ post.original_content }}</p>
                 </div>
-                  
-                </div>
               </div>
-            </div>
-          {% endif %}
+            {% endif %}
+          </div>
         </div>
+      {% empty %}
+        <p class="text-center">Brak postów do wyświetlenia.</p>
+      {% endfor %}
     </div>
-  {% empty %}
-    <p>Brak postów do wyświetlenia.</p>
-  {% endfor %}
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const postDates = document.querySelectorAll('.post-date');
+    postDates.forEach(function (dateElement) {
+      const date = new Date(dateElement.getAttribute('data-date'));
+      const now = new Date();
+      const diff = Math.abs(now - date);
+      const diffSeconds = Math.floor(diff / 1000);
+      const diffMinutes = Math.floor(diff / (1000 * 60));
+      const diffHours = Math.floor(diff / (1000 * 60 * 60));
+      const diffDays = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const diffWeeks = Math.floor(diff / (1000 * 60 * 60 * 24 * 7));
+
+      let formattedDate;
+      if (diffSeconds < 60) {
+        formattedDate = `${diffSeconds} sekund temu`;
+      } else if (diffMinutes < 60) {
+        formattedDate = `${diffMinutes} minut temu`;
+      } else if (diffHours < 24) {
+        formattedDate = `${diffHours} godzin temu`;
+      } else if (diffDays < 7) {
+        formattedDate = `${diffDays} dni temu`;
+      } else {
+        formattedDate = date.toLocaleDateString('pl-PL', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+
+      dateElement.textContent = formattedDate;
+    });
+  });
+</script>
 {% endblock %}

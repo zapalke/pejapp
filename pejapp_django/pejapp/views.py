@@ -6,11 +6,8 @@ from django.contrib.auth.decorators import login_required
 from .models import Post
 from django.contrib.auth.models import User
 from django.db.models import Q
-from django.contrib.auth import logout
-from django.contrib import messages
-from django.shortcuts import redirect
-from django.contrib.auth.forms import AuthenticationForm
 from django.utils import timezone
+from datetime import datetime, timedelta
 
 def register(request):
     if request.method == 'POST':
@@ -38,9 +35,29 @@ def profile(request):
         u_form = UserUpdateForm(instance=request.user)
         p_form = ProfileUpdateForm(instance=request.user.profile)
 
+    # Search functionality
+    search_query = request.GET.get('search', '')
+    start_date = request.GET.get('start_date', '')
+    end_date = request.GET.get('end_date', '')
+
+    posts = request.user.post_set.all()
+
+    if search_query:
+        posts = posts.filter(content__icontains=search_query)
+
+    if start_date:
+        posts = posts.filter(date_posted__gte=start_date)
+
+    if end_date:
+        posts = posts.filter(date_posted__lte=end_date)
+
+    start_of_week = timezone.now() - timedelta(days=timezone.now().weekday())
+
     context = {
         'u_form': u_form,
-        'p_form': p_form
+        'p_form': p_form,
+        'posts': posts,
+        'start_of_week': start_of_week,
     }
 
     return render(request, 'pejapp/profile.html', context)
@@ -63,7 +80,6 @@ def post_create(request):
         if form.is_valid():
             post = form.save(commit=False)
             post.author = request.user
-            post.display_name = request.user.profile.display_name
             post.save()
             return redirect('post-list')
     else:
@@ -84,7 +100,6 @@ def post_update(request, pk):
             post.modified_flag = True
             post.last_modified = timezone.now()
             post.original_content = prev_content
-            post.display_name = request.user.profile.display_name
             form.save()
             return redirect('profile')
     else:

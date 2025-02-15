@@ -38,6 +38,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # Dodatkowe elementy
+    'crispy_forms',
     # Główna aplikacja
     "pejapp",
 ]
@@ -125,3 +127,5 @@ LOGOUT_REDIRECT_URL = 'post-list'       # Redirect to login after logout
 
 STATIC_ROOT = os.path.join(BASE_DIR,'static')
 STATIC_URL = 'static/'
+
+CRISPY_TEMPLATE_PACK = 'bootstrap5' # Crispy forms template pack
