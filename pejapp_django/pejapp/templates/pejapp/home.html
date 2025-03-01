@@ -4,33 +4,9 @@
   <div class="row justify-content-center">
     <div class="col-md-8">
       <h2 class="text-left mb-4" style="font-family: 'Arial Black', sans-serif; color: #007bff;">Wszystkie posty</h2>
-      {% for post in posts %}
-        <div class="card mb-4 shadow-sm">
-          <div class="card-header d-flex justify-content-between align-items-center">
-            {% if post.title %}
-              <h5 class="mb-0">{{ post.title }}</h5>
-            {% endif %}
-            <small class="text-muted ms-auto">Opublikowane przez <a href="#" class="text-primary">{{ post.author.username }}</a> <span class="post-date" data-date="{{ post.date_posted|date:'c' }}">{{ post.date_posted }}</span></small>
-          </div>
-          <div class="card-body">
-            <p class="card-text">{{ post.content }}</p>
-            {% if post.modified_flag %}
-              <p class="text-muted">
-                <small>Zmodyfikowano <span class="post-date" data-date="{{ post.last_modified|date:'c' }}">{{ post.last_modified }}</span> | 
-                  <a class="text-info" data-bs-toggle="collapse" href="#originalContent{{ post.pk }}" role="button" aria-expanded="false" aria-controls="originalContent{{ post.pk }}">Pokaż oryginalną treść</a>
-                </small>
-              </p>
-              <div class="collapse mt-3" id="originalContent{{ post.pk }}">
-                <div class="card card-body" style="font-size: 0.875em; border: 2px solid #ccc; background-color: #f8f9fa;">
-                  <p>{{ post.original_content }}</p>
-                </div>
-              </div>
-            {% endif %}
-          </div>
-        </div>
-      {% empty %}
-        <p class="text-center">Brak postów do wyświetlenia.</p>
-      {% endfor %}
+      <div id="post-list">
+        {% include 'pejapp/post_list.html' %}
+      </div>
     </div>
   </div>
 </div>
@@ -68,6 +44,38 @@
       }
 
       dateElement.textContent = formattedDate;
+    });
+
+    document.querySelectorAll('.pagination a').forEach(function (link) {
+      link.addEventListener('click', function (e) {
+        e.preventDefault();
+        const page = this.getAttribute('data-page');
+        fetch(`?page=${page}`, {
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        })
+        .then(response => response.text())
+        .then(html => {
+          document.getElementById('post-list').innerHTML = html;
+          // Re-attach event listeners to new pagination links
+          document.querySelectorAll('.pagination a').forEach(function (link) {
+            link.addEventListener('click', function (e) {
+              e.preventDefault();
+              const page = this.getAttribute('data-page');
+              fetch(`?page=${page}`, {
+                headers: {
+                  'X-Requested-With': 'XMLHttpRequest'
+                }
+              })
+              .then(response => response.text())
+              .then(html => {
+                document.getElementById('post-list').innerHTML = html;
+              });
+            });
+          });
+        });
+      });
     });
   });
 </script>

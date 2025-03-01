@@ -1,0 +1,48 @@
+{% extends 'pejapp/base.html' %}
+{% block content %}
+<div class="container mt-5">
+  <h2 class="text-center mb-4" style="font-family: 'Arial Black', sans-serif; color: #007bff;">Wyniki wyszukiwania dla "{{ query }}"</h2>
+  <div class="row">
+    <div class="col-md-6">
+      <h3>Posty</h3>
+      <div id="post-results">
+        {% include 'pejapp/post_search_results.html' %}
+      </div>
+    </div>
+    <div class="col-md-6">
+      <h3>Użytkownicy</h3>
+      <div id="user-results">
+        {% include 'pejapp/user_search_results.html' %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.pagination a').forEach(function (link) {
+      link.addEventListener('click', function (e) {
+        e.preventDefault();
+        const page = this.getAttribute('data-page');
+        const query = new URLSearchParams(window.location.search).get('q');
+        const isPostPage = this.closest('#post-results') !== null;
+        const url = isPostPage ? `?q=${query}&post_page=${page}` : `?q=${query}&user_page=${page}`;
+
+        fetch(url, {
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        })
+        .then(response => response.text())
+        .then(html => {
+          if (isPostPage) {
+            document.getElementById('post-results').innerHTML = html;
+          } else {
+            document.getElementById('user-results').innerHTML = html;
+          }
+        });
+      });
+    });
+  });
+</script>
+{% endblock %}

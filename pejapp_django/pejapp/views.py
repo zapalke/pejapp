@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import login, authenticate
+from django.contrib.auth import login, authenticate, logout
 from django.contrib import messages
 from .forms import UserRegisterForm, UserUpdateForm, ProfileUpdateForm, PostForm
 from django.contrib.auth.decorators import login_required
@@ -7,7 +7,9 @@ from .models import Post
 from django.contrib.auth.models import User
 from django.db.models import Q
 from django.utils import timezone
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from datetime import datetime, timedelta
+from django.http import JsonResponse
 
 def register(request):
     if request.method == 'POST':
@@ -53,6 +55,19 @@ def profile(request):
 
     start_of_week = timezone.now() - timedelta(days=timezone.now().weekday())
 
+    paginator = Paginator(posts, 5)
+
+    page = request.GET.get('page')
+    try:
+        posts = paginator.page(page)
+    except PageNotAnInteger:
+        posts = paginator.page(1)
+    except EmptyPage:
+        posts = paginator.page(paginator.num_pages)
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return render(request, 'pejapp/post_list.html', {'posts': posts})
+
     context = {
         'u_form': u_form,
         'p_form': p_form,
@@ -64,14 +79,57 @@ def profile(request):
 
 def home(request):
     posts = Post.objects.all().order_by('-date_posted')
+    paginator = Paginator(posts, 5)
+    page = request.GET.get('page')
+    try:
+        posts = paginator.page(page)
+    except PageNotAnInteger:
+        posts = paginator.page(1)
+    except EmptyPage:
+        posts = paginator.page(paginator.num_pages)
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return render(request, 'pejapp/post_list.html', {'posts': posts})
     return render(request, 'pejapp/home.html', {'posts': posts})
 
-def search_users(request):
+def search(request):
     query = request.GET.get('q', '')
-    users = []
-    if query:
-        users = User.objects.filter(Q(username__icontains=query) | Q(email__icontains(query)))
-    return render(request, 'pejapp/search_users.html', {'users': users, 'query': query})
+    post_page = request.GET.get('post_page', 1)
+    user_page = request.GET.get('user_page', 1)
+
+    posts = Post.objects.filter(Q(title__icontains=query) | Q(content__icontains=query)).order_by('-date_posted')
+    users = User.objects.filter(Q(username__icontains=query) | Q(email__icontains=query))
+
+    post_paginator = Paginator(posts, 5)
+    user_paginator = Paginator(users, 5)
+
+    try:
+        posts = post_paginator.page(post_page)
+    except PageNotAnInteger:
+        posts = post_paginator.page(1)
+    except EmptyPage:
+        posts = post_paginator.page(post_paginator.num_pages)
+
+    try:
+        users = user_paginator.page(user_page)
+    except PageNotAnInteger:
+        users = user_paginator.page(1)
+    except EmptyPage:
+        users = user_paginator.page(user_paginator.num_pages)
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        if 'post_page' in request.GET:
+            return render(request, 'pejapp/post_search_results.html', {'posts': posts, 'query': query})
+        elif 'user_page' in request.GET:
+            return render(request, 'pejapp/user_search_results.html', {'users': users, 'query': query})
+
+    context = {
+        'query': query,
+        'posts': posts,
+        'users': users,
+    }
+
+    return render(request, 'pejapp/search_results.html', context)
 
 @login_required
 def post_create(request):
@@ -112,10 +170,24 @@ def post_delete(request, pk):
     post.delete()
     return redirect('profile')
 
-def user_posts(request, username):
-    user = User.objects.get(username=username)
-    posts = Post.objects.filter(author=user)
-    return render(request, 'pejapp/user_posts.html', {'posts': posts, 'user': user})
+def user_profile(request, username):
+    user = get_object_or_404(User, username=username)
+    posts = user.post_set.all().order_by('-date_posted')
+    paginator = Paginator(posts, 5)
+    page = request.GET.get('page')
+    try:
+        posts = paginator.page(page)
+    except PageNotAnInteger:
+        posts = paginator.page(1)
+    except EmptyPage:
+        posts = paginator.page(paginator.num_pages)
+
+    context = {
+        'profile_user': user,
+        'posts': posts,
+    }
+
+    return render(request, 'pejapp/user_profile.html', context)
 
 def custom_login(request):
     if request.method == 'POST':
@@ -140,4 +212,3 @@ def custom_logout(request):
     logout(request)
     messages.success(request, 'You have been logged out successfully.')
     return redirect('post-list')
-

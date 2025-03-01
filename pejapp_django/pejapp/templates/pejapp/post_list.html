@@ -1,0 +1,53 @@
+{% for post in posts %}
+  <div class="card mb-4 shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      {% if post.title %}
+        <h5 class="mb-0">{{ post.title }}</h5>
+      {% endif %}
+      <small class="text-muted ms-auto">Opublikowane przez <a href="#" class="text-primary">{{ post.author.username }}</a> <span class="post-date" data-date="{{ post.date_posted|date:'c' }}">{{ post.date_posted }}</span></small>
+    </div>
+    <div class="card-body">
+      <p class="card-text">{{ post.content }}</p>
+      {% if post.modified_flag %}
+        <p class="text-muted">
+          <small>Zmodyfikowano <span class="post-date" data-date="{{ post.last_modified|date:'c' }}">{{ post.last_modified }}</span> | 
+            <a class="text-info" data-bs-toggle="collapse" href="#originalContent{{ post.pk }}" role="button" aria-expanded="false" aria-controls="originalContent{{ post.pk }}">Pokaż oryginalną treść</a>
+          </small>
+        </p>
+        <div class="collapse mt-3" id="originalContent{{ post.pk }}">
+          <div class="card card-body" style="font-size: 0.875em; border: 2px solid #ccc; background-color: #f8f9fa;">
+            <p>{{ post.original_content }}</p>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+{% empty %}
+  <p class="text-center">Brak postów do wyświetlenia.</p>
+{% endfor %}
+
+<nav aria-label="Page navigation">
+  <ul class="pagination justify-content-center">
+    {% if posts.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ posts.previous_page_number }}" data-page="{{ posts.previous_page_number }}">Poprzednia</a>
+      </li>
+    {% endif %}
+    {% for num in posts.paginator.page_range %}
+      {% if posts.number == num %}
+        <li class="page-item active">
+          <span class="page-link">{{ num }}</span>
+        </li>
+      {% else %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ num }}" data-page="{{ num }}">{{ num }}</a>
+        </li>
+      {% endif %}
+    {% endfor %}
+    {% if posts.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ posts.next_page_number }}" data-page="{{ posts.next_page_number }}">Następna</a>
+      </li>
+    {% endif %}
+  </ul>
+</nav>

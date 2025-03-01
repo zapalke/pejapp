@@ -10,7 +10,7 @@
           <h4 class="card-title" style="color: #007bff; font-weight: bold;">
             Profil {{ user.username }}
           </h4>
-          <p class="card-text">{{ user.profile.bio|default:"Brak opisu" }}</p>
+          <p class="card-text text-muted">{{ user.profile.bio|default:"Brak opisu" }}</p>
           <button class="btn btn-info mt-4" type="button" data-bs-toggle="collapse" data-bs-target="#editProfile" aria-expanded="false" aria-controls="editProfile">
             Edytuj profil <i class="bi bi-caret-down-fill" id="profileIcon" style="color: gray;"></i>
           </button>
@@ -62,50 +62,9 @@
             <button type="submit" class="btn btn-success">Zastosuj filtry</button>
             <a href="{% url 'profile' %}" class="btn btn-secondary">Usuń filtry</a>
           </form>
-          <h4 class="mb-3">Posty z tego tygodnia</h4>
-          {% for post in posts %}
-            {% if post.date_posted >= start_of_week %}
-              <div class="card mb-3" style="margin-bottom: 20px;">
-                <div class="card-body">
-                  <p class="card-text">{{ post.content }}</p>
-                  <p class="card-text"><small class="text-muted">{{ post.date_posted }}</small></p>
-                  <a href="{% url 'post-update' post.pk %}" class="btn btn-secondary btn-sm">Edytuj</a>
-                  <a href="{% url 'post-delete' post.pk %}" class="btn btn-danger btn-sm">Usuń</a>
-                </div>
-              </div>
-            {% endif %}
-          {% endfor %}
-          {% if posts|length > 0 %}
-            {% for post in posts %}
-              {% if post.date_posted < start_of_week %}
-                <h4 class="mt-4 mb-3">Starsze posty</h4>
-                <div class="accordion" id="olderPosts">
-                  {% for post in posts %}
-                    {% if post.date_posted < start_of_week %}
-                      <div class="accordion-item">
-                        <h2 class="accordion-header" id="heading{{ post.pk }}">
-                          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ post.pk }}" aria-expanded="false" aria-controls="collapse{{ post.pk }}">
-                            {{ post.date_posted }}
-                          </button>
-                        </h2>
-                        <div id="collapse{{ post.pk }}" class="accordion-collapse collapse" aria-labelledby="heading{{ post.pk }}" data-bs-parent="#olderPosts">
-                          <div class="accordion-body">
-                            <p class="card-text">{{ post.content }}</p>
-                            <p class="card-text"><small class="text-muted">{{ post.date_posted }}</small></p>
-                            <a href="{% url 'post-update' post.pk %}" class="btn btn-secondary btn-sm">Edytuj</a>
-                            <a href="{% url 'post-delete' post.pk %}" class="btn btn-danger btn-sm">Usuń</a>
-                          </div>
-                        </div>
-                      </div>
-                    {% endif %}
-                  {% endfor %}
-                </div>
-                {% endif %}
-            {% endfor %}
-          {% endif %}
-          {% if not posts %}
-            <p>Brak postów do wyświetlenia.</p>
-          {% endif %}
+          <div id="post-list">
+            {% include 'pejapp/post_list.html' %}
+          </div>
         </div>
       </div>
     </div>
@@ -123,6 +82,71 @@
     editProfile.addEventListener('hidden.bs.collapse', function () {
       profileIcon.classList.remove('bi-caret-up-fill');
       profileIcon.classList.add('bi-caret-down-fill');
+    });
+
+    const postDates = document.querySelectorAll('.post-date');
+    postDates.forEach(function (dateElement) {
+      const date = new Date(dateElement.getAttribute('data-date'));
+      const now = new Date();
+      const diff = Math.abs(now - date);
+      const diffSeconds = Math.floor(diff / 1000);
+      const diffMinutes = Math.floor(diff / (1000 * 60));
+      const diffHours = Math.floor(diff / (1000 * 60 * 60));
+      const diffDays = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const diffWeeks = Math.floor(diff / (1000 * 60 * 60 * 24 * 7));
+
+      let formattedDate;
+      if (diffSeconds < 60) {
+        formattedDate = `${diffSeconds} sekund temu`;
+      } else if (diffMinutes < 60) {
+        formattedDate = `${diffMinutes} minut temu`;
+      } else if (diffHours < 24) {
+        formattedDate = `${diffHours} godzin temu`;
+      } else if (diffDays < 7) {
+        formattedDate = `${diffDays} dni temu`;
+      } else {
+        formattedDate = date.toLocaleDateString('pl-PL', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+
+      dateElement.textContent = formattedDate;
+    });
+
+    document.querySelectorAll('.pagination a').forEach(function (link) {
+      link.addEventListener('click', function (e) {
+        e.preventDefault();
+        const page = this.getAttribute('data-page');
+        fetch(`?page=${page}`, {
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        })
+        .then(response => response.text())
+        .then(html => {
+          document.getElementById('post-list').innerHTML = html;
+          // Re-attach event listeners to new pagination links
+          document.querySelectorAll('.pagination a').forEach(function (link) {
+            link.addEventListener('click', function (e) {
+              e.preventDefault();
+              const page = this.getAttribute('data-page');
+              fetch(`?page=${page}`, {
+                headers: {
+                  'X-Requested-With': 'XMLHttpRequest'
+                }
+              })
+              .then(response => response.text())
+              .then(html => {
+                document.getElementById('post-list').innerHTML = html;
+              });
+            });
+          });
+        });
+      });
     });
   });
 </script>

@@ -58,8 +58,9 @@
                 &nbsp;
                 <span class="fs-4">Pejapp</span>
             </a>
-            <form class="col-12 col-lg-auto mb-3 mb-lg-0" role="search">
-                    <input type="search" class="form-control" name="search" placeholder="Szukaj...">
+            <form class="d-flex" action="{% url 'search' %}" method="get">
+                <input class="form-control me-2" type="search" placeholder="Szukaj" aria-label="Szukaj" name="q">
+                <button class="btn btn-outline-success" type="submit">Szukaj</button>
             </form>
         </div>
     </header>
