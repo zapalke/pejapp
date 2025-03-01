@@ -4,7 +4,7 @@
       {% if post.title %}
         <h5 class="mb-0">{{ post.title }}</h5>
       {% endif %}
-      <small class="text-muted ms-auto">Opublikowane przez <a href="#" class="text-primary">{{ post.author.username }}</a> <span class="post-date" data-date="{{ post.date_posted|date:'c' }}">{{ post.date_posted }}</span></small>
+      <small class="text-muted ms-auto">Opublikowane przez <a href="{% url 'user-profile' post.author.username %}" class="text-primary">{{ post.author.username }}</a> <span class="post-date" data-date="{{ post.date_posted|date:'c' }}">{{ post.date_posted }}</span></small>
     </div>
     <div class="card-body">
       <p class="card-text">{{ post.content }}</p>

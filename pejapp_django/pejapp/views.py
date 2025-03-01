@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, authenticate, logout
 from django.contrib import messages
 from .forms import UserRegisterForm, UserUpdateForm, ProfileUpdateForm, PostForm
+from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.decorators import login_required
 from .models import Post
 from django.contrib.auth.models import User
@@ -23,26 +24,30 @@ def register(request):
         form = UserRegisterForm()
     return render(request, 'pejapp/register.html', {'form': form})
 
-@login_required
-def profile(request):
-    if request.method == 'POST':
+def user_profile(request, username=None):
+    if username:
+        user = get_object_or_404(User, username=username)
+    else:
+        user = request.user
+
+    if request.user.is_authenticated and request.method == 'POST' and user == request.user:
         u_form = UserUpdateForm(request.POST, instance=request.user)
         p_form = ProfileUpdateForm(request.POST, instance=request.user.profile)
         if u_form.is_valid() and p_form.is_valid():
             u_form.save()
             p_form.save()
             messages.success(request, f'Your account has been updated!')
-            return redirect('profile')
+            return redirect('user-profile', username=request.user.username)
     else:
-        u_form = UserUpdateForm(instance=request.user)
-        p_form = ProfileUpdateForm(instance=request.user.profile)
+        u_form = UserUpdateForm(instance=request.user) if request.user.is_authenticated else None
+        p_form = ProfileUpdateForm(instance=request.user.profile) if request.user.is_authenticated else None
 
-    # Search functionality
     search_query = request.GET.get('search', '')
     start_date = request.GET.get('start_date', '')
     end_date = request.GET.get('end_date', '')
+    sort_order = request.GET.get('sort', 'desc')
 
-    posts = request.user.post_set.all()
+    posts = user.post_set.all()
 
     if search_query:
         posts = posts.filter(content__icontains=search_query)
@@ -53,10 +58,12 @@ def profile(request):
     if end_date:
         posts = posts.filter(date_posted__lte=end_date)
 
-    start_of_week = timezone.now() - timedelta(days=timezone.now().weekday())
+    if sort_order == 'asc':
+        posts = posts.order_by('date_posted')
+    else:
+        posts = posts.order_by('-date_posted')
 
     paginator = Paginator(posts, 5)
-
     page = request.GET.get('page')
     try:
         posts = paginator.page(page)
@@ -65,17 +72,15 @@ def profile(request):
     except EmptyPage:
         posts = paginator.page(paginator.num_pages)
 
-    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        return render(request, 'pejapp/post_list.html', {'posts': posts})
-
     context = {
+        'profile_user': user,
         'u_form': u_form,
         'p_form': p_form,
         'posts': posts,
-        'start_of_week': start_of_week,
+        'sort_order': sort_order,
     }
 
-    return render(request, 'pejapp/profile.html', context)
+    return render(request, 'pejapp/user_profile.html', context)
 
 def home(request):
     posts = Post.objects.all().order_by('-date_posted')
@@ -159,7 +164,7 @@ def post_update(request, pk):
             post.last_modified = timezone.now()
             post.original_content = prev_content
             form.save()
-            return redirect('profile')
+            return redirect('user-profile', username=request.user.username)
     else:
         form = PostForm(instance=post)
     return render(request, 'pejapp/create_post.html', {'form': form})
@@ -168,26 +173,7 @@ def post_update(request, pk):
 def post_delete(request, pk):
     post = Post.objects.get(pk=pk)
     post.delete()
-    return redirect('profile')
-
-def user_profile(request, username):
-    user = get_object_or_404(User, username=username)
-    posts = user.post_set.all().order_by('-date_posted')
-    paginator = Paginator(posts, 5)
-    page = request.GET.get('page')
-    try:
-        posts = paginator.page(page)
-    except PageNotAnInteger:
-        posts = paginator.page(1)
-    except EmptyPage:
-        posts = paginator.page(paginator.num_pages)
-
-    context = {
-        'profile_user': user,
-        'posts': posts,
-    }
-
-    return render(request, 'pejapp/user_profile.html', context)
+    return redirect('user-profile', username=request.user.username)
 
 def custom_login(request):
     if request.method == 'POST':
