@@ -1,10 +1,12 @@
 from bottle import Bottle, run, jinja2_template as template
 from models import session, User
+import views
 import bottle
 
 bottle.TEMPLATE_PATH.clear()
 bottle.TEMPLATE_PATH.append("./templates")
 app = Bottle()
+app.merge(views.app)
 
 
 @app.route("/")

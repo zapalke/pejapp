@@ -10,9 +10,15 @@
     <header>
         <h1>Pejapp</h1>
         <nav>
-            <a href="/">Strona główna</a>
-            <a href="/about">O nas</a>
+            {% if not user %}
+                <a href="/login">Logowanie</a>
+                <a href="/register">Rejestracja</a>
+            {% else %}
+                <a href="/dashboard">Panel</a>
+                <a href="/logout">Wyloguj</a>
+            {% endif %}
         </nav>
+        
     </header>
 
     <main>

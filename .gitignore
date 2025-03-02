@@ -171,3 +171,6 @@ cython_debug/
 .pypirc
 *desktop.ini
 pejapp_django.zip
+.vscode/settings.json
+pejapp_bottle/database.db-shm
+pejapp_bottle/database.db-wal

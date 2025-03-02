@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block title %}Panel użytkownika{% endblock %}
+
+{% block content %}
+    <h2>Witaj, {{ user.name }}!</h2>
+    <p>Email: {{ user.email }}</p>
+    <p><a href="/logout">Wyloguj</a></p>
+{% endblock %}
