@@ -1,0 +1,77 @@
+{% extends 'pejapp/base.html' %}
+{% block content %}
+<div class="container mt-5">
+  <h2 class="text-center mb-4">Profil użytkownika {{ profile_user.username }}</h2>
+  <div class="row">
+    <div class="col-md-4">
+      <div class="card mb-4 shadow-sm">
+        <div class="card-body text-center">
+          <h4 class="card-title" style="color: #007bff; font-weight: bold;">
+            {{ profile_user.username }}
+          </h4>
+          <p class="card-text text-muted">{{ profile_user.email }}</p>
+          <p class="card-text text-muted">{{ profile_user.bio or "Brak opisu" }}</p>
+          {% if user and user.id == profile_user.id %}
+            <button class="btn btn-info mt-4" type="button" data-bs-toggle="collapse" data-bs-target="#editProfile" aria-expanded="false" aria-controls="editProfile">
+              Edytuj profil <i class="bi bi-caret-down-fill" id="profileIcon" style="color: gray;"></i>
+            </button>
+          {% endif %}
+        </div>
+      </div>
+      {% if user and user.id == profile_user.id %}
+        <div class="collapse" id="editProfile">
+          <div class="card mb-4 shadow-sm">
+            <div class="card-body">
+              <h3 class="card-title">Edytuj profil</h3>
+              <form method="post">
+                <div class="form-floating mb-3">
+                  <input type="text" name="username" class="form-control" id="id_username" placeholder="Nazwa użytkownika" value="{{ profile_user.username }}">
+                  <label for="id_username">Nazwa użytkownika</label>
+                </div>
+                <div class="form-floating mb-3">
+                  <input type="email" name="email" class="form-control" id="id_email" placeholder="Email" value="{{ profile_user.email }}">
+                  <label for="id_email">Email</label>
+                </div>
+                <div class="form-floating mb-3">
+                  <textarea name="bio" class="form-control" id="id_bio" placeholder="Bio">{{ profile_user.bio }}</textarea>
+                  <label for="id_bio">Bio</label>
+                </div>
+                <button type="submit" class="btn btn-success">Zaktualizuj</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+    <div class="col-md-8">
+      <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+          <h3 class="card-title mb-4">Posty</h3>
+          <div id="post-list">
+            {% for post in posts %}
+              <div class="list-group mb-4">
+                <a href="{{ url_for('user_profile', username=post.author.username) }}" class="list-group-item list-group-item-action">
+                  <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1">{{ post.title }}</h5>
+                    <small>{{ post.date_posted }}</small>
+                  </div>
+                  <p class="mb-1">{{ post.content[:100] }}...</p>
+                  <small>Opublikowane przez <span class="text-primary">{{ post.author.username }}</span></small>
+                </a>
+                {% if user and user.id == profile_user.id %}
+                  <div class="mt-2 d-flex justify-content-end">
+                    <a href="{{ url_for('post_update', post_id=post.id) }}" class="btn btn-sm btn-warning me-2">Edytuj</a>
+                    <a href="{{ url_for('post_delete', post_id=post.id) }}" class="btn btn-sm btn-danger">Usuń</a>
+                  </div>
+                {% endif %}
+              </div>
+            {% else %}
+              <p class="text-center">Brak postów do wyświetlenia.</p>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

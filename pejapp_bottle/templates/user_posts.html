@@ -1,0 +1,15 @@
+{% extends 'pejapp/base.html' %}
+{% block title %}Posty użytkownika - Pejapp{% endblock %}
+{% block content %}
+    <h1>Posty użytkownika {{ post.author }}</h1>
+    <ul>
+        {% for post in posts %}
+            <li>
+                <p>{{ post.content }}</p>
+                <p><strong>Opublikowano:</strong> {{ post.date_posted }}</p>
+            </li>
+        {% else %}
+            <p>Brak postów do wyświetlenia.</p>
+        {% endfor %}
+    </ul>
+{% endblock %}

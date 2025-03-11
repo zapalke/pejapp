@@ -1,16 +1,24 @@
 {% extends "base.html" %}
 
-{% block title %}Logowanie{% endblock %}
-
 {% block content %}
-    <h2>Logowanie</h2>
-    <form action="/login" method="post">
-        <label for="email">Email:</label>
-        <input type="email" id="email" name="email" required>
-
-        <label for="password">Hasło:</label>
-        <input type="password" id="password" name="password" required>
-
-        <button type="submit">Zaloguj</button>
-    </form>
+<div class="container">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <main class="form-signin">
+        <form method="post">
+          <h1 class="h3 mb-3 fw-normal text-center">Proszę zaloguj się</h1>
+          <div class="form-floating mb-3">
+            <input type="text" name="username" class="form-control" id="id_username" placeholder="Nazwa użytkownika" required>
+            <label for="id_username">Nazwa użytkownika</label>
+          </div>
+          <div class="form-floating mb-3">
+            <input type="password" name="password" class="form-control" id="id_password" placeholder="Hasło" required>
+            <label for="id_password">Hasło</label>
+          </div>
+          <button class="btn btn-primary w-100 py-2" type="submit">Zaloguj się</button>
+        </form>
+      </main>
+    </div>
+  </div>
+</div>
 {% endblock %}
