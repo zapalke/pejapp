@@ -21,10 +21,34 @@ TEMPLATE_PATH = os.path.join(os.getcwd(), "templates")
 BOTTLE_TEMPLATE_PATH.append(TEMPLATE_PATH)
 
 # Template engine configuration
-env = Environment(loader=FileSystemLoader(TEMPLATE_PATH))
-# Możesz dodać dodatkowe filtry, np. truncatewords, jeśli potrzebujesz
+env = Environment(loader=FileSystemLoader(TEMPLATE_PATH), auto_reload=True)
 
-# Beaker session options
+# Template filters
+env.filters["strftime"] = lambda value, fmt="%Y-%m-%d %H:%M:%S": (
+    value.strftime(fmt) if hasattr(value, "strftime") else value
+)
+
+
+# Dodajemy filtr truncatewords – choć w końcu nie będziemy go używać w szablonach
+def truncatewords(value, num=20):
+    try:
+        num = int(num)
+    except (ValueError, TypeError):
+        return value
+    words = value.split()
+    if len(words) > num:
+        return " ".join(words[:num]) + "..."
+    return value
+
+
+env.filters["truncatewords"] = truncatewords
+
+# Powiąż nasze środowisko Jinja2 z globalnym słownikiem szablonów Bottle
+from bottle import TEMPLATES
+
+TEMPLATES["jinja2"] = env
+
+# ==== Beaker session options ====
 session_opts = {
     "session.type": "file",
     "session.data_dir": "./session_data",
@@ -79,6 +103,15 @@ class Paginator:
         self.total_items = len(items)
         self.total_pages = math.ceil(self.total_items / per_page) if per_page > 0 else 1
 
+    def __iter__(self):
+        return iter(self.page_items)
+
+    @property
+    def page_items(self):
+        start = (self.page - 1) * self.per_page
+        end = start + self.per_page
+        return self.items[start:end]
+
     @property
     def number(self):
         return self.page
@@ -107,15 +140,25 @@ class Paginator:
     def next_page_number(self):
         return self.page + 1 if self.has_next else None
 
-    @property
-    def page_items(self):
-        start = (self.page - 1) * self.per_page
-        end = start + self.per_page
-        return self.items[start:end]
-
 
 def paginate_items(items, page, per_page):
     return Paginator(items, page, per_page)
+
+
+# ==== Helper functions dla truncacji tekstu ====
+def truncate_text(text, limit=20):
+    if len(text) > limit:
+        return text[:limit] + "..."
+    return text
+
+
+def convert_and_truncate_posts(posts, limit=20):
+    new_posts = []
+    for post in posts:
+        d = dict(post)
+        d["content"] = truncate_text(d.get("content", ""), limit)
+        new_posts.append(d)
+    return new_posts
 
 
 # ==== User functions ====
@@ -167,12 +210,6 @@ def get_posts_by_user(user_id):
     return posts
 
 
-# ==== Template filters ====
-env.filters["strftime"] = lambda value, fmt="%Y-%m-%d %H:%M:%S": (
-    value.strftime(fmt) if hasattr(value, "strftime") else value
-)
-
-
 # ==== Helper functions ====
 def get_current_user():
     session = request.environ.get("beaker.session")
@@ -186,9 +223,10 @@ def get_current_user():
 def home():
     all_posts = get_all_posts()
     page = int(request.query.get("page", "1"))
-    per_page = 10  # Możesz dostosować liczbę postów na stronę
+    per_page = 10  # lub inna liczba postów na stronę
     posts_paginated = paginate_items(all_posts, page, per_page)
     user = get_current_user()
+    # Przekazujemy obiekt paginatora – szablon może iterować dzięki __iter__
     return template("pejapp/home", posts=posts_paginated, user=user, _env=env)
 
 
@@ -284,3 +322,44 @@ def user_profile(username):
 def search():
     query = request.query.get("q")
     db = get_db()
+    # Pobieramy wyniki z bazy
+    raw_posts = db.execute(
+        "SELECT * FROM posts WHERE title LIKE ?", ("%" + query + "%",)
+    ).fetchall()
+    raw_users = db.execute(
+        "SELECT * FROM users WHERE username LIKE ?", ("%" + query + "%",)
+    ).fetchall()
+    # Przetwarzamy posty, aby skrócić treść do 20 znaków na backendzie
+    posts_truncated = convert_and_truncate_posts(raw_posts, limit=20)
+    # Paginujemy wyniki
+    post_page = int(request.query.get("post_page", "1"))
+    user_page = int(request.query.get("user_page", "1"))
+    per_page = 10
+    posts_paginated = paginate_items(posts_truncated, post_page, per_page)
+    users_paginated = paginate_items(list(raw_users), user_page, per_page)
+    user = get_current_user()
+    return template(
+        "pejapp/search_results",
+        posts=posts_paginated,
+        users=users_paginated,
+        query=query,
+        user=user,
+        _env=env,
+    )
+
+
+@bottle_app.route("/static/<filepath:path>")
+def static_files(filepath):
+    return static_file(filepath, root=STATIC_PATH)
+
+
+# ==== Session configuration ====
+app = SessionMiddleware(bottle_app, session_opts)
+
+# ==== Launching application ====
+if __name__ == "__main__":
+    if not os.path.exists(DATABASE):
+        init_db()
+    from bottle import run
+
+    run(app=app, host="localhost", port=8081, debug=True, reloader=True)
