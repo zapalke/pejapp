@@ -1,0 +1,22 @@
+{% extends "pejapp/base.html" %}
+{% block title %}Lista Postów{% endblock %}
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Lista Postów</h1>
+    {% if posts %}
+        <ul class="list-group">
+            {% for post in posts %}
+                <li class="list-group-item">
+                    <h5>{{ post.title }}</h5>
+                    <p>{{ post.content }}</p>
+                    <p>
+                        <small class="text-muted">Data: {{ post.date_posted }}</small>
+                    </p>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>Brak postów do wyświetlenia.</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,11 +1,14 @@
-{% extends "base.html" %}
-
+{% extends 'pejapp/base.html' %}
+{% block title %}Zaloguj się - Pejapp{% endblock %}
 {% block content %}
 <div class="container">
   <div class="row justify-content-center">
     <div class="col-md-6">
       <main class="form-signin">
-        <form method="post">
+        {% if error %}
+          <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
+        <form method="post" action="/login">
           <h1 class="h3 mb-3 fw-normal text-center">Proszę zaloguj się</h1>
           <div class="form-floating mb-3">
             <input type="text" name="username" class="form-control" id="id_username" placeholder="Nazwa użytkownika" required>

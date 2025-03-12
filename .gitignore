@@ -174,3 +174,5 @@ pejapp_django.zip
 .vscode/settings.json
 pejapp_bottle/database.db-shm
 pejapp_bottle/database.db-wal
+*.cache
+*.zip

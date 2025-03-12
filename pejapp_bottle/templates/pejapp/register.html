@@ -1,0 +1,69 @@
+{% extends "pejapp/base.html" %}
+{% block title %}Zarejestruj się - Pejapp{% endblock %}
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Zarejestruj się</h1>
+    {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+    <form method="post" action="/register" id="registerForm">
+        <div class="mb-3">
+            <label for="username" class="form-label">Nazwa użytkownika</label>
+            <input type="text" class="form-control" id="username" name="username" required>
+        </div>
+        <div class="mb-3">
+            <label for="email" class="form-label">Email</label>
+            <input type="email" class="form-control" id="email" name="email" required>
+        </div>
+        <div class="mb-3">
+            <label for="password" class="form-label">Hasło</label>
+            <input type="password" class="form-control" id="password" name="password" required>
+            <div id="passwordHelp" class="form-text">
+                Hasło powinno mieć co najmniej 8 znaków, zawierać przynajmniej jedną wielką literę, jedną małą literę oraz jedną cyfrę.
+            </div>
+        </div>
+        <div class="mb-3">
+            <label for="confirm_password" class="form-label">Potwierdź hasło</label>
+            <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+            <div id="confirmPasswordFeedback" class="mt-2"></div>
+        </div>
+        <button type="submit" class="btn btn-primary">Zarejestruj się</button>
+    </form>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var passwordInput = document.getElementById('password');
+    var confirmPasswordInput = document.getElementById('confirm_password');
+    var confirmPasswordFeedback = document.getElementById('confirmPasswordFeedback');
+
+    function validatePasswords() {
+        var password = passwordInput.value;
+        var confirmPassword = confirmPasswordInput.value;
+        var messages = [];
+        if (password.length < 8) {
+            messages.push("Hasło musi mieć co najmniej 8 znaków.");
+        }
+        if (!/[A-Z]/.test(password)) {
+            messages.push("Hasło musi zawierać przynajmniej jedną wielką literę.");
+        }
+        if (!/[a-z]/.test(password)) {
+            messages.push("Hasło musi zawierać przynajmniej jedną małą literę.");
+        }
+        if (!/[0-9]/.test(password)) {
+            messages.push("Hasło musi zawierać przynajmniej jedną cyfrę.");
+        }
+        if (password !== confirmPassword) {
+            messages.push("Hasła nie są identyczne.");
+        }
+        if (messages.length > 0) {
+            confirmPasswordFeedback.innerHTML = '<div class="alert alert-warning" role="alert">' + messages.join('<br>') + '</div>';
+        } else {
+            confirmPasswordFeedback.innerHTML = '<div class="alert alert-success" role="alert">Hasło spełnia wymagania.</div>';
+        }
+    }
+
+    passwordInput.addEventListener('input', validatePasswords);
+    confirmPasswordInput.addEventListener('input', validatePasswords);
+});
+</script>
+{% endblock %}
