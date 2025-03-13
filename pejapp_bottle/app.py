@@ -12,6 +12,7 @@ import os
 from beaker.middleware import SessionMiddleware
 import datetime
 import math
+import bcrypt
 
 # ==== App configuration ====
 DATABASE = os.path.join(os.getcwd(), "database.db")
@@ -179,9 +180,10 @@ def convert_post_rows_full(rows):
 # ==== User functions ====
 def create_user(username, email, password):
     db = get_db()
+    hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
     db.execute(
         "INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
-        (username, email, password),
+        (username, email, hashed),
     )
     db.commit()
 
@@ -194,10 +196,12 @@ def get_user_by_username(username):
 
 def verify_user(username, password):
     db = get_db()
-    user = db.execute(
-        "SELECT * FROM users WHERE username = ? AND password = ?", (username, password)
-    ).fetchone()
-    return user
+    user = db.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
+    if user:
+        stored_hash = user["password"]
+        if bcrypt.checkpw(password.encode("utf-8"), stored_hash.encode("utf-8")):
+            return user
+    return None
 
 
 # ==== Posts functions ====
