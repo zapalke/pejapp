@@ -21,30 +21,33 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-  document.querySelectorAll('.pagination a').forEach(function (link) {
-    link.addEventListener('click', function (e) {
+  document.addEventListener('click', function(e) {
+      const target = e.target.closest('.pagination a');
+      if (!target) return;
+  
       e.preventDefault();
-      const page = this.getAttribute('data-page');
-      const query = new URLSearchParams(window.location.search).get('q');
-      const isPostPage = this.closest('#post-results') !== null;
-      const url = isPostPage ? `?q=${query}&post_page=${page}` : `?q=${query}&user_page=${page}`;
-
+      const url = target.getAttribute('href');
+  
       fetch(url, {
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest'
-        }
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
       })
       .then(response => response.text())
       .then(html => {
-        if (isPostPage) {
-          document.getElementById('post-results').innerHTML = html;
-        } else {
-          document.getElementById('user-results').innerHTML = html;
-        }
-      });
-    });
+          if(url.indexOf('post_page') !== -1) {
+              const container = document.getElementById('post-results');
+              if (container) {
+                  container.innerHTML = html;
+              }
+          } 
+          else if(url.indexOf('user_page') !== -1) {
+              const container = document.getElementById('user-results');
+              if (container) {
+                  container.innerHTML = html;
+              }
+          }
+      })
+      .catch(error => console.error('Błąd AJAX:', error));
   });
-});
-</script>
+  </script>
+  
 {% endblock %}

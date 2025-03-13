@@ -17,7 +17,7 @@
   <ul class="pagination justify-content-center">
     {% if posts.has_previous %}
       <li class="page-item">
-        <a class="page-link" href="?q={{ query }}&post_page={{ posts.previous_page_number }}" data-page="{{ posts.previous_page_number }}">Poprzednia</a>
+        <a class="page-link" href="?q={{ query }}&post_page={{ posts.previous_page_number }}&ajax=posts" data-page="{{ posts.previous_page_number }}">Poprzednia</a>
       </li>
     {% endif %}
     {% for num in posts.paginator.page_range %}
@@ -27,13 +27,13 @@
         </li>
       {% else %}
         <li class="page-item">
-          <a class="page-link" href="?q={{ query }}&post_page={{ num }}" data-page="{{ num }}">{{ num }}</a>
+          <a class="page-link" href="?q={{ query }}&post_page={{ num }}&ajax=posts" data-page="{{ num }}">{{ num }}</a>
         </li>
       {% endif %}
     {% endfor %}
     {% if posts.has_next %}
       <li class="page-item">
-        <a class="page-link" href="?q={{ query }}&post_page={{ posts.next_page_number }}" data-page="{{ posts.next_page_number }}">Następna</a>
+        <a class="page-link" href="?q={{ query }}&post_page={{ posts.next_page_number }}&ajax=posts" data-page="{{ posts.next_page_number }}">Następna</a>
       </li>
     {% endif %}
   </ul>

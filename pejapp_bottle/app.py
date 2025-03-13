@@ -29,7 +29,6 @@ env.filters["strftime"] = lambda value, fmt="%Y-%m-%d %H:%M:%S": (
 )
 
 
-# Dodajemy filtr truncatewords – choć w końcu nie będziemy go używać w szablonach
 def truncatewords(value, num=20):
     try:
         num = int(num)
@@ -76,7 +75,8 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT UNIQUE NOT NULL,
         email TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL
+        password TEXT NOT NULL,
+        bio TEXT
     );
     CREATE TABLE IF NOT EXISTS posts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -152,13 +152,28 @@ def truncate_text(text, limit=20):
     return text
 
 
-def convert_and_truncate_posts(posts, limit=20):
-    new_posts = []
-    for post in posts:
-        d = dict(post)
-        d["content"] = truncate_text(d.get("content", ""), limit)
-        new_posts.append(d)
-    return new_posts
+def convert_post_row(row, text_limit=20):
+    d = dict(row)
+    # Przypisujemy dane autora do zagnieżdżonego słownika i usuwamy je z głównego słownika
+    d["author"] = {"username": d.pop("username"), "email": d.pop("email")}
+    d["content"] = truncate_text(d.get("content", ""), text_limit)
+    return d
+
+
+def convert_post_rows(rows, text_limit=20):
+    return [convert_post_row(row, text_limit) for row in rows]
+
+
+def convert_post_row_full(row):
+    d = dict(row)
+    username = d.pop("username")
+    email = d.pop("email") if "email" in d else ""
+    d["author"] = {"username": username, "email": email}
+    return d
+
+
+def convert_post_rows_full(rows):
+    return [convert_post_row_full(row) for row in rows]
 
 
 # ==== User functions ====
@@ -198,16 +213,29 @@ def create_post(title, content, user_id):
 
 def get_all_posts():
     db = get_db()
-    posts = db.execute("SELECT * FROM posts ORDER BY date_posted DESC").fetchall()
-    return posts
+    query = """
+        SELECT posts.*, users.username, users.email
+        FROM posts
+        JOIN users ON posts.author_id = users.id
+        ORDER BY date_posted DESC
+    """
+    rows = db.execute(query).fetchall()
+    # Na stronie głównej chcemy pełne treści, więc nie skracamy
+    return convert_post_rows_full(rows)
 
 
 def get_posts_by_user(user_id):
     db = get_db()
-    posts = db.execute(
-        "SELECT * FROM posts WHERE author_id = ? ORDER BY date_posted DESC", (user_id,)
-    ).fetchall()
-    return posts
+    query = """
+        SELECT posts.*, users.username, users.email
+        FROM posts
+        JOIN users ON posts.author_id = users.id
+        WHERE posts.author_id = ?
+        ORDER BY date_posted DESC
+    """
+    rows = db.execute(query, (user_id,)).fetchall()
+    # Dla profilu użytkownika również pełna treść
+    return convert_post_rows_full(rows)
 
 
 # ==== Helper functions ====
@@ -223,21 +251,23 @@ def get_current_user():
 def home():
     all_posts = get_all_posts()
     page = int(request.query.get("page", "1"))
-    per_page = 10  # lub inna liczba postów na stronę
+    per_page = 5
     posts_paginated = paginate_items(all_posts, page, per_page)
     user = get_current_user()
-    # Przekazujemy obiekt paginatora – szablon może iterować dzięki __iter__
-    return template("pejapp/home", posts=posts_paginated, user=user, _env=env)
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return template("pejapp/post_list", posts=posts_paginated, user=user, _env=env)
+    else:
+        return template("pejapp/home", posts=posts_paginated, user=user, _env=env)
 
 
 @bottle_app.route("/register", method=["GET", "POST"])
 def register():
     user = get_current_user()
     if request.method == "POST":
-        username = request.forms.get("username")
-        email = request.forms.get("email")
-        password = request.forms.get("password")
-        confirm_password = request.forms.get("confirm_password")
+        username = request.forms.getunicode("username")
+        email = request.forms.getunicode("email")
+        password = request.forms.getunicode("password")
+        confirm_password = request.forms.getunicode("confirm_password")
 
         if password != confirm_password:
             return template(
@@ -262,8 +292,8 @@ def register():
 def login():
     user = get_current_user()
     if request.method == "POST":
-        username = request.forms.get("username")
-        password = request.forms.get("password")
+        username = request.forms.getunicode("username")
+        password = request.forms.getunicode("password")
         user_record = verify_user(username, password)
         if user_record:
             session = request.environ.get("beaker.session")
@@ -292,8 +322,8 @@ def create_post_route():
     if not user.get("is_authenticated"):
         redirect("/login")
     if request.method == "POST":
-        title = request.forms.get("title")
-        content = request.forms.get("content")
+        title = request.forms.getunicode("title")
+        content = request.forms.getunicode("content")
         user_id = user["id"]
         create_post(title, content, user_id)
         redirect("/")
@@ -302,18 +332,54 @@ def create_post_route():
 
 @bottle_app.route("/user/<username>")
 def user_profile(username):
-    profile_user = get_user_by_username(username)
-    if not profile_user:
+    row = get_user_by_username(username)
+    if not row:
         return "Użytkownik nie istnieje"
-    posts = get_posts_by_user(profile_user["id"])
+    profile_user = dict(row)
+    if "bio" not in profile_user:
+        profile_user["bio"] = ""
+
+    posts_list = get_posts_by_user(profile_user["id"])
+    filters = {
+        "search": request.query.get("search", ""),
+        "start_date": request.query.get("start_date", ""),
+        "end_date": request.query.get("end_date", ""),
+        "sort": request.query.get("sort", "desc"),
+    }
+
+    if filters["search"]:
+        posts_list = [
+            post
+            for post in posts_list
+            if filters["search"].lower() in (post.get("title") or "").lower()
+            or filters["search"].lower() in (post.get("content") or "").lower()
+        ]
+    if filters["start_date"]:
+        posts_list = [
+            post for post in posts_list if post["date_posted"] >= filters["start_date"]
+        ]
+    if filters["end_date"]:
+        posts_list = [
+            post for post in posts_list if post["date_posted"] <= filters["end_date"]
+        ]
+    reverse = True if filters["sort"] == "desc" else False
+    posts_list.sort(key=lambda post: post["date_posted"], reverse=reverse)
+
+    page = int(request.query.get("page", "1"))
+    per_page = 10
+    posts_paginated = paginate_items(posts_list, page, per_page)
+
     current = get_current_user()
     is_owner = current.get("is_authenticated") and (current.get("username") == username)
+
     return template(
         "pejapp/user_profile",
-        user=profile_user,
-        posts=posts,
+        profile_user=profile_user,
+        posts=posts_paginated,
         is_owner=is_owner,
         current_user=current,
+        user=current,
+        filters=filters,
         _env=env,
     )
 
@@ -322,30 +388,158 @@ def user_profile(username):
 def search():
     query = request.query.get("q")
     db = get_db()
-    # Pobieramy wyniki z bazy
+    query_str = "%" + query + "%"
     raw_posts = db.execute(
-        "SELECT * FROM posts WHERE title LIKE ?", ("%" + query + "%",)
+        "SELECT posts.*, users.username, users.email FROM posts JOIN users ON posts.author_id = users.id WHERE posts.title LIKE ?",
+        (query_str,),
     ).fetchall()
     raw_users = db.execute(
-        "SELECT * FROM users WHERE username LIKE ?", ("%" + query + "%",)
+        "SELECT * FROM users WHERE username LIKE ?", (query_str,)
     ).fetchall()
-    # Przetwarzamy posty, aby skrócić treść do 20 znaków na backendzie
-    posts_truncated = convert_and_truncate_posts(raw_posts, limit=20)
-    # Paginujemy wyniki
+    posts = convert_post_rows(raw_posts, text_limit=30)
     post_page = int(request.query.get("post_page", "1"))
     user_page = int(request.query.get("user_page", "1"))
-    per_page = 10
-    posts_paginated = paginate_items(posts_truncated, post_page, per_page)
+    per_page = 5
+    posts_paginated = paginate_items(posts, post_page, per_page)
     users_paginated = paginate_items(list(raw_users), user_page, per_page)
     user = get_current_user()
-    return template(
-        "pejapp/search_results",
-        posts=posts_paginated,
-        users=users_paginated,
-        query=query,
-        user=user,
-        _env=env,
-    )
+    ajax = request.query.get("ajax")
+    if ajax == "posts":
+        return template(
+            "pejapp/post_search_results",
+            posts=posts_paginated,
+            query=query,
+            user=user,
+            _env=env,
+        )
+    elif ajax == "users":
+        return template(
+            "pejapp/user_search_results",
+            users=users_paginated,
+            query=query,
+            user=user,
+            _env=env,
+        )
+    else:
+        return template(
+            "pejapp/search_results",
+            posts=posts_paginated,
+            users=users_paginated,
+            query=query,
+            user=user,
+            _env=env,
+        )
+
+
+@bottle_app.route("/user/<username>/update", method=["GET", "POST"])
+def update_profile(username):
+    current = get_current_user()
+    if not (current.get("is_authenticated") and current.get("username") == username):
+        return "Nie masz uprawnień do edycji tego profilu."
+
+    row = get_user_by_username(username)
+    if not row:
+        return "Użytkownik nie istnieje"
+    user_record = dict(row)
+    if "bio" not in user_record or user_record["bio"] is None:
+        user_record["bio"] = ""
+
+    if request.method == "POST":
+        new_username = request.forms.getunicode("username")
+        new_email = request.forms.getunicode("email")
+        new_bio = request.forms.getunicode("bio")
+
+        if new_username != username and get_user_by_username(new_username):
+            return template(
+                "pejapp/update_profile",
+                error="Użytkownik o podanej nazwie już istnieje.",
+                user=user_record,
+                _env=env,
+            )
+
+        db = get_db()
+        db.execute(
+            "UPDATE users SET username = ?, email = ?, bio = ? WHERE id = ?",
+            (new_username, new_email, new_bio, user_record["id"]),
+        )
+        db.commit()
+
+        session = request.environ.get("beaker.session")
+        updated = get_user_by_username(new_username)
+        updated_obj = dict(updated)
+        updated_obj["is_authenticated"] = True
+        session["user"] = updated_obj
+        session.save()
+        redirect(f"/user/{new_username}")
+
+    return template("pejapp/update_profile", user=user_record, _env=env)
+
+
+@bottle_app.route("/post-update/<post_id>", method=["GET", "POST"])
+def post_update(post_id):
+    db = get_db()
+    current = get_current_user()
+    # Pobieramy posta wraz z danymi autora
+    query = """
+        SELECT posts.*, users.username, users.email 
+        FROM posts 
+        JOIN users ON posts.author_id = users.id 
+        WHERE posts.id = ?
+    """
+    row = db.execute(query, (post_id,)).fetchone()
+    if not row:
+        return "Post nie istnieje"
+    post = convert_post_row_full(row)
+    # Sprawdzamy, czy aktualny użytkownik jest autorem posta
+    if not (
+        current.get("is_authenticated")
+        and current.get("username") == post["author"]["username"]
+    ):
+        return "Brak uprawnień do edycji tego posta"
+
+    if request.method == "POST":
+        new_title = request.forms.getunicode("title")
+        new_content = request.forms.getunicode("content")
+        now = datetime.datetime.now().isoformat()
+        # Jeśli post nie był wcześniej modyfikowany, zachowujemy oryginalną treść
+        if not post.get("modified_flag"):
+            original_content = post["content"]
+        else:
+            original_content = post.get("original_content", "")
+        db.execute(
+            "UPDATE posts SET title = ?, content = ?, last_modified = ?, modified_flag = 1, original_content = ? WHERE id = ?",
+            (new_title, new_content, now, original_content, post_id),
+        )
+        db.commit()
+        redirect("/user/" + current.get("username"))
+
+    return template("pejapp/post_update", post=post, user=current, _env=env)
+
+
+@bottle_app.route("/post-delete/<post_id>", method=["POST"])
+def post_delete(post_id):
+    db = get_db()
+    current = get_current_user()
+    # Pobieramy posta wraz z danymi autora
+    query = """
+        SELECT posts.*, users.username 
+        FROM posts 
+        JOIN users ON posts.author_id = users.id 
+        WHERE posts.id = ?
+    """
+    row = db.execute(query, (post_id,)).fetchone()
+    if not row:
+        return "Post nie istnieje"
+    post = convert_post_row_full(row)
+    # Sprawdzamy, czy aktualny użytkownik jest autorem posta
+    if not (
+        current.get("is_authenticated")
+        and current.get("username") == post["author"]["username"]
+    ):
+        return "Brak uprawnień do usunięcia tego posta"
+    db.execute("DELETE FROM posts WHERE id = ?", (post_id,))
+    db.commit()
+    redirect("/user/" + current.get("username"))
 
 
 @bottle_app.route("/static/<filepath:path>")

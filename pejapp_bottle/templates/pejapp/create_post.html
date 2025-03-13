@@ -1,17 +1,18 @@
-{% extends 'base.html' %}
-
+{% extends 'pejapp/base.html' %}
 {% block content %}
-  <h2>Dodaj nowy post</h2>
-  <form method="post">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <div class="container mt-5">
+    <h2>Dodaj nowy post</h2>
+    <form method="post" action="/create_post" accept-charset="UTF-8">
+      <!-- CSRF token pominięty -->
       <div class="mb-3">
-          <label for="title" class="form-label">Tytuł</label>
-          <input type="text" class="form-control" id="title" name="title" required>
+        <label for="title" class="form-label">Tytuł</label>
+        <input type="text" name="title" id="title" class="form-control" required>
       </div>
       <div class="mb-3">
-          <label for="content" class="form-label">Treść</label>
-          <textarea class="form-control" id="content" name="content" rows="5" required></textarea>
+        <label for="content" class="form-label">Treść</label>
+        <textarea name="content" id="content" rows="5" class="form-control" required></textarea>
       </div>
       <button type="submit" class="btn btn-success">Dodaj</button>
-  </form>
+    </form>
+  </div>
 {% endblock %}

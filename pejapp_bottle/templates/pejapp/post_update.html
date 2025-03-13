@@ -1,0 +1,17 @@
+{% extends 'pejapp/base.html' %}
+{% block content %}
+<div class="container mt-5">
+  <h2>Edycja posta</h2>
+  <form method="post" action="/post-update/{{ post.id }}">
+    <div class="mb-3">
+      <label for="title" class="form-label">Tytuł</label>
+      <input type="text" name="title" id="title" class="form-control" value="{{ post.title }}" required>
+    </div>
+    <div class="mb-3">
+      <label for="content" class="form-label">Treść</label>
+      <textarea name="content" id="content" rows="5" class="form-control" required>{{ post.content }}</textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">Zaktualizuj post</button>
+  </form>
+</div>
+{% endblock %}

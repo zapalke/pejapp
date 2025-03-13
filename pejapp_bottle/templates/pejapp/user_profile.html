@@ -3,6 +3,7 @@
 <div class="container mt-5">
   <h2 class="text-center mb-4">Profil użytkownika {{ profile_user.username }}</h2>
   <div class="row">
+    <!-- Lewa kolumna: dane użytkownika oraz formularz edycji -->
     <div class="col-md-4">
       <div class="card mb-4 shadow-sm">
         <div class="card-body text-center">
@@ -10,20 +11,21 @@
             {{ profile_user.username }}
           </h4>
           <p class="card-text text-muted">{{ profile_user.email }}</p>
-          <p class="card-text text-muted">{{ profile_user.bio or "Brak opisu" }}</p>
-          {% if user and user.id == profile_user.id %}
+          <p class="card-text text-muted">{{ profile_user.bio }}</p>
+          {% if user.is_authenticated and user.username == profile_user.username %}
             <button class="btn btn-info mt-4" type="button" data-bs-toggle="collapse" data-bs-target="#editProfile" aria-expanded="false" aria-controls="editProfile">
               Edytuj profil <i class="bi bi-caret-down-fill" id="profileIcon" style="color: gray;"></i>
             </button>
           {% endif %}
         </div>
       </div>
-      {% if user and user.id == profile_user.id %}
+      {% if user.is_authenticated and user.username == profile_user.username %}
         <div class="collapse" id="editProfile">
           <div class="card mb-4 shadow-sm">
             <div class="card-body">
               <h3 class="card-title">Edytuj profil</h3>
-              <form method="post">
+              <form method="post" action="/user/{{ profile_user.username }}/update">
+                <!-- CSRF token pominięty -->
                 <div class="form-floating mb-3">
                   <input type="text" name="username" class="form-control" id="id_username" placeholder="Nazwa użytkownika" value="{{ profile_user.username }}">
                   <label for="id_username">Nazwa użytkownika</label>
@@ -43,35 +45,130 @@
         </div>
       {% endif %}
     </div>
+    <!-- Prawa kolumna: wyszukiwanie i lista postów użytkownika -->
     <div class="col-md-8">
       <div class="card mb-4 shadow-sm">
         <div class="card-body">
           <h3 class="card-title mb-4">Posty</h3>
+          <form method="get" class="mb-4">
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label for="search">Szukaj w postach</label>
+                <input type="text" id="search" name="search" placeholder="Szukaj w postach" class="form-control" value="{{ filters.search }}">
+              </div>
+              <div class="col-md-3">
+                <label for="start_date">Data początkowa</label>
+                <input type="date" id="start_date" name="start_date" class="form-control" value="{{ filters.start_date }}">
+              </div>
+              <div class="col-md-3">
+                <label for="end_date">Data końcowa</label>
+                <input type="date" id="end_date" name="end_date" class="form-control" value="{{ filters.end_date }}">
+              </div>
+            </div>
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label for="sort">Sortuj według</label>
+                <select id="sort" name="sort" class="form-control">
+                  <option value="desc" {% if filters.sort == 'desc' %}selected{% endif %}>Od najnowszych</option>
+                  <option value="asc" {% if filters.sort == 'asc' %}selected{% endif %}>Od najstarszych</option>
+                </select>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-success">Zastosuj filtry</button>
+            <a href="/user/{{ profile_user.username }}" class="btn btn-secondary">Usuń filtry</a>
+          </form>          
           <div id="post-list">
             {% for post in posts %}
               <div class="list-group mb-4">
-                <a href="{{ url_for('user_profile', username=post.author.username) }}" class="list-group-item list-group-item-action">
+                <a href="/post/{{ post.id }}" class="list-group-item list-group-item-action">
                   <div class="d-flex w-100 justify-content-between">
                     <h5 class="mb-1">{{ post.title }}</h5>
                     <small>{{ post.date_posted }}</small>
                   </div>
-                  <p class="mb-1">{{ post.content[:100] }}...</p>
+                  <p class="mb-1">{{ post.content }}</p>
                   <small>Opublikowane przez <span class="text-primary">{{ post.author.username }}</span></small>
                 </a>
-                {% if user and user.id == profile_user.id %}
+                {% if user.is_authenticated and user.username == profile_user.username %}
                   <div class="mt-2 d-flex justify-content-end">
-                    <a href="{{ url_for('post_update', post_id=post.id) }}" class="btn btn-sm btn-warning me-2">Edytuj</a>
-                    <a href="{{ url_for('post_delete', post_id=post.id) }}" class="btn btn-sm btn-danger">Usuń</a>
+                    <a href="/post-update/{{ post.id }}" class="btn btn-sm btn-warning me-2">Edytuj</a>
+                    <form method="post" action="/post-delete/{{ post.id }}" style="display:inline;">
+                      <button type="submit" class="btn btn-sm btn-danger">Usuń</button>
+                    </form>
                   </div>
                 {% endif %}
               </div>
             {% else %}
               <p class="text-center">Brak postów do wyświetlenia.</p>
             {% endfor %}
+
+            <nav aria-label="Page navigation">
+              <ul class="pagination justify-content-center">
+                {% if posts.has_previous %}
+                  <li class="page-item">
+                    <a class="page-link" href="?page={{ posts.previous_page_number }}" data-page="{{ posts.previous_page_number }}">Poprzednia</a>
+                  </li>
+                {% endif %}
+                {% for num in posts.paginator.page_range %}
+                  {% if posts.number == num %}
+                    <li class="page-item active">
+                      <span class="page-link">{{ num }}</span>
+                    </li>
+                  {% else %}
+                    <li class="page-item">
+                      <a class="page-link" href="?page={{ num }}" data-page="{{ num }}">{{ num }}</a>
+                    </li>
+                  {% endif %}
+                {% endfor %}
+                {% if posts.has_next %}
+                  <li class="page-item">
+                    <a class="page-link" href="?page={{ posts.next_page_number }}" data-page="{{ posts.next_page_number }}">Następna</a>
+                  </li>
+                {% endif %}
+              </ul>
+            </nav>
           </div>
         </div>
       </div>
     </div>
   </div>
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Obsługa zmiany ikony przy rozwijaniu edycji profilu
+    const profileIcon = document.getElementById('profileIcon');
+    const editProfile = document.getElementById('editProfile');
+    if(editProfile) {
+      editProfile.addEventListener('shown.bs.collapse', function () {
+        profileIcon.classList.remove('bi-caret-down-fill');
+        profileIcon.classList.add('bi-caret-up-fill');
+      });
+      editProfile.addEventListener('hidden.bs.collapse', function () {
+        profileIcon.classList.remove('bi-caret-up-fill');
+        profileIcon.classList.add('bi-caret-down-fill');
+      });
+    }
+
+    // Event delegation dla paginacji – odświeżamy listę postów bez pełnego przeładowania strony
+    document.addEventListener('click', function(e) {
+      const target = e.target.closest('.pagination a');
+      if (!target) return;
+      e.preventDefault();
+      const page = target.getAttribute('data-page');
+      const url = new URL(window.location.href);
+      url.searchParams.set('page', page);
+      fetch(url, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      })
+      .then(response => response.text())
+      .then(html => {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const newPosts = doc.querySelector('#post-list').innerHTML;
+        document.getElementById('post-list').innerHTML = newPosts;
+      })
+      .catch(err => console.error(err));
+    });
+  });
+</script>
 {% endblock %}

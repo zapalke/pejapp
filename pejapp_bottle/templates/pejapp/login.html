@@ -8,7 +8,7 @@
         {% if error %}
           <div class="alert alert-danger">{{ error }}</div>
         {% endif %}
-        <form method="post" action="/login">
+        <form method="post" action="/login" accept-charset="UTF-8">
           <h1 class="h3 mb-3 fw-normal text-center">Proszę zaloguj się</h1>
           <div class="form-floating mb-3">
             <input type="text" name="username" class="form-control" id="id_username" placeholder="Nazwa użytkownika" required>

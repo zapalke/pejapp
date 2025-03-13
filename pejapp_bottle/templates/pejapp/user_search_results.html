@@ -20,7 +20,7 @@
   <ul class="pagination justify-content-center">
     {% if users.has_previous %}
       <li class="page-item">
-        <a class="page-link" href="?q={{ query }}&user_page={{ users.previous_page_number }}" data-page="{{ users.previous_page_number }}">Poprzednia</a>
+        <a class="page-link" href="?q={{ query }}&user_page={{ users.previous_page_number }}&ajax=users" data-page="{{ users.previous_page_number }}">Poprzednia</a>
       </li>
     {% endif %}
     {% for num in users.paginator.page_range %}
@@ -30,13 +30,13 @@
         </li>
       {% else %}
         <li class="page-item">
-          <a class="page-link" href="?q={{ query }}&user_page={{ num }}" data-page="{{ num }}">{{ num }}</a>
+          <a class="page-link" href="?q={{ query }}&user_page={{ num }}&ajax=users" data-page="{{ num }}">{{ num }}</a>
         </li>
       {% endif %}
     {% endfor %}
     {% if users.has_next %}
       <li class="page-item">
-        <a class="page-link" href="?q={{ query }}&user_page={{ users.next_page_number }}" data-page="{{ users.next_page_number }}">Następna</a>
+        <a class="page-link" href="?q={{ query }}&user_page={{ users.next_page_number }}&ajax=users" data-page="{{ users.next_page_number }}">Następna</a>
       </li>
     {% endif %}
   </ul>

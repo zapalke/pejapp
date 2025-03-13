@@ -1,15 +1,25 @@
 {% extends 'pejapp/base.html' %}
-{% block title %}Posty użytkownika - Pejapp{% endblock %}
 {% block content %}
-    <h1>Posty użytkownika {{ post.author }}</h1>
-    <ul>
-        {% for post in posts %}
-            <li>
-                <p>{{ post.content }}</p>
-                <p><strong>Opublikowano:</strong> {{ post.date_posted }}</p>
-            </li>
-        {% else %}
-            <p>Brak postów do wyświetlenia.</p>
-        {% endfor %}
-    </ul>
+<div class="container mt-5">
+  <h2 class="mb-4">Edytuj profil</h2>
+  {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+  {% endif %}
+  <form method="post" action="/user/{{ user.username }}/update">
+    <div class="form-floating mb-3">
+      <input type="text" name="username" class="form-control" id="username" placeholder="Nazwa użytkownika" value="{{ user.username }}" required>
+      <label for="username">Nazwa użytkownika</label>
+    </div>
+    <div class="form-floating mb-3">
+      <input type="email" name="email" class="form-control" id="email" placeholder="Email" value="{{ user.email }}" required>
+      <label for="email">Email</label>
+    </div>
+    <div class="form-floating mb-3">
+      <textarea name="bio" class="form-control" id="bio" placeholder="Bio" style="height: 100px;">{{ user.bio|default("Brak opisu") }}</textarea>
+      <label for="bio">Bio</label>
+    </div>
+    <button type="submit" class="btn btn-success">Zaktualizuj profil</button>
+    <a href="/user/{{ user.username }}" class="btn btn-secondary">Anuluj</a>
+  </form>
+</div>
 {% endblock %}
